@@ -1,0 +1,32 @@
+name: build
+on: [push, workflow_dispatch]
+jobs:
+  b:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.7
+      - name: arrange
+        run: |
+          P=proj/app/src/main
+          mkdir -p $P/java/com/system/app $P/assets $P/res/mipmap-xxxhdpi
+          cp *.java $P/java/com/system/app/
+          cp AndroidManifest.xml $P/
+          cp index.html $P/assets/
+          cp ic_launcher.png $P/res/mipmap-xxxhdpi/
+          cd proj
+          echo "org.gradle.jvmargs=-Xmx2g" > gradle.properties
+          echo "plugins{id 'com.android.application' version '8.3.2' apply false}" > build.gradle
+          printf '%s\n' "pluginManagement{repositories{google();mavenCentral();gradlePluginPortal()}}" "dependencyResolutionManagement{repositories{google();mavenCentral()}}" "include ':app'" > settings.gradle
+          printf '%s\n' "plugins{id 'com.android.application'}" "android{namespace 'com.system.app'" "compileSdk 34" "defaultConfig{applicationId 'com.system.app';minSdk 21;targetSdk 28;versionCode 1;versionName '1.0'}" "compileOptions{sourceCompatibility JavaVersion.VERSION_17;targetCompatibility JavaVersion.VERSION_17}}" > app/build.gradle
+      - run: cd proj && gradle assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: system-apk
+          path: proj/app/build/outputs/apk/debug/app-debug.apk
